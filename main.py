@@ -16,12 +16,12 @@ def lista_ordenada(lista_no_ordenada: str):
 
     lista_ordenada = sorted(lista)
 
-    response = {
+    respuesta = {
         "hora_sistema": hora_actual,
         "lista_ordenada": lista_ordenada
     }
 
-    return json.loads(json.dumps(response, indent=4))
+    return json.loads(json.dumps(respuesta, indent=4))
 
 
 @app.get("/healthcheck")
