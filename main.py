@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from datetime import datetime
+import pytz
 import json
 
 app = FastAPI()
@@ -9,7 +10,10 @@ app = FastAPI()
 def lista_ordenada(lista_no_ordenada: str):
     lista = [int(x) for x in lista_no_ordenada.split(",")]
 
-    hora_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Obtener la hora actual en la zona horaria de Colombia
+    zona_horaria_colombia = pytz.timezone("America/Bogota")
+    hora_actual = datetime.now(zona_horaria_colombia).strftime("%Y-%m-%d %H:%M:%S")
+
     lista_ordenada = sorted(lista)
 
     response = {
