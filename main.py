@@ -12,7 +12,7 @@ app = FastAPI()
 def lista_ordenada(lista_no_ordenada: str):
     """
     Recibe una lista no ordenada como una cadena de texto (por ejemplo: "5,3,8,1").
-    La convierte en una lista de enteros, la ordena y devuelve un JSON con la lista ordenada y la hora actual.
+    La convierte en una lista de enteros, la ordena y devuelve un JSON con la lista ordenada y la hora actual del sistema.
     """
 
     # Convierte la lista de números, recibida como una cadena de texto separada por comas, en una lista de enteros.
@@ -64,5 +64,4 @@ def healthcheck():
     Endpoint para comprobar el estado de la API.
     Simplemente devuelve "OK" si la API está en funcionamiento.
     """
-
     return "OK"
