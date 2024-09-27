@@ -18,13 +18,9 @@ def guardar_mongo_db(lista, hora_actual):
     # Obtener las variables de entorno para la conexión a MongoDB
     mongodb_host = os.getenv("MONGODB_HOST", "localhost")  # Host de MongoDB desde la variable de entorno
     mongodb_port = os.getenv("MONGODB_PORT", "27017")  # Puerto de MongoDB desde la variable de entorno
-    mongodb_ssl = os.getenv("MONGODB_SSL", "true").lower() in ['true', '1', 'yes']  # Uso de SSL si está habilitado en las variables de entorno
 
-    # Establecer conexión a MongoDB con TLS/SSL si está habilitado
-    client = MongoClient(
-        f"mongodb://{mongodb_host}:{mongodb_port}/",
-        ssl=mongodb_ssl
-    )
+    # Establecer conexión a MongoDB (sin SSL)
+    client = MongoClient(f"mongodb://{mongodb_host}:{mongodb_port}/")
 
     # Seleccionar la base de datos "python_app"
     db = client["python_app"]
