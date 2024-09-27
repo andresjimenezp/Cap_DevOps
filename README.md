@@ -65,3 +65,9 @@ Puedes acceder al endpoint /guardar-lista-no-ordenada para ordenar una lista de 
 - http://localhost:8000/guardar-lista-no-ordenada?lista_no_ordenada=5,4,7,2,7,2
 
 Si deseas visualizar los datos almacenados en MongoDB, puedes utilizar MongoDB Compass o cualquier otra herramienta para conectarte al contenedor MongoDB en el puerto 27017.
+
+
+## Crear y ejecutar los contenedores
+
+Para construir y levantar los contenedores, ejecuta el siguiente comando:
+- docker-compose --env-file .env --profile prod up --build
