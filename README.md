@@ -14,60 +14,122 @@ El proyecto también está configurado para ejecutarse dentro de un contenedor D
 
 - Docker
 - MongoDB (se utilizará la imagen oficial de MongoDB en Docker).
+- Python 3.9 o superior
 
 ## Instrucciones para ejecutar el proyecto
 
+### Crear el archivo `.env`
+
+Crea un archivo `.env` en la raíz del proyecto con las siguientes variables de entorno:
+
+```
+MONGODB_HOST=mongodb
+MONGODB_PORT=27017
+TZ=America/Bogota
+```
+
+Asegúrate de agregar el archivo `.env` al `.gitignore` para evitar subir información sensible al repositorio.
+
+También incluye una versión de demostración del archivo `.env` llamada `.env.demo` para que otros desarrolladores puedan configurarlo rápidamente.
+
 ### Construir la imagen Docker
 
-Ejecuta el siguiente comando para construir la imagen Docker:
+Ejecuta el siguiente comando para construir la imagen Docker de la API:
 
-- docker build -t fastapi-sorted-list .
+```bash
+docker build -t python-api .
+```
 
-### Ejecutar el contenedor Docker
+### Crear y configurar la red Docker
 
-Después de construir la imagen, puedes ejecutar el contenedor con el siguiente comando:
+Crea una red Docker llamada `mongodb-net` para que los contenedores (API y MongoDB) puedan comunicarse:
 
-- docker run -d -p 8000:8000 fastapi-sorted-list
+```bash
+docker network create mongodb-net
+```
 
-Esto iniciará la API y la expondrá en http://localhost:8000.
+### Crear directorios para volúmenes
+
+Crea los directorios necesarios para la persistencia de datos y logs:
+
+```bash
+mkdir -p volumes/logs
+```
+
+### Crear y ejecutar los contenedores con docker-compose
+
+Utiliza el archivo `docker-compose.yml` para levantar los servicios. Ejecuta:
+
+```bash
+docker-compose --env-file .env --profile prod up --build
+```
+
+Esto iniciará los contenedores de MongoDB y la API de Python.
 
 ## Probar los endpoints
 
 ### Lista ordenada
 
-Puedes acceder al endpoint /lista-ordenada para ordenar una lista de números. Por ejemplo:
+Puedes acceder al endpoint `/lista-ordenada` para ordenar una lista de números. Por ejemplo:
 
-Ejemplo:
-- http://localhost:8000/lista-ordenada?lista_no_ordenada=3,1,4,5,2
+```bash
+http://localhost:8000/lista-ordenada?lista_no_ordenada=3,1,4,5,2
+```
 
-## Agregar configuración MongoDB
+### Guardar lista no ordenada
 
-Crea una red Docker llamada mongodb-net que permitirá que los contenedores (API y MongoDB) se comuniquen entre sí:
+Accede al endpoint `/guardar-lista-no-ordenada` para guardar una lista en MongoDB:
 
-- docker network create mongodb-net
+```bash
+http://localhost:8000/guardar-lista-no-ordenada?lista_no_ordenada=5,4,7,2,7,2
+```
 
-Busca y utiliza la imagen oficial más pequeña de MongoDB desde Docker Hub para correr MongoDB en un contenedor asociado a la red mongodb-net:
+### Verificar el estado de la API
 
-- docker run -d --name mongodb --network mongodb-net -p 27017:27017 mongo:latest
+Accede al endpoint `/healthcheck` para comprobar que la API está funcionando:
 
-Utiliza el Dockerfile provisto para construir la imagen Docker de la API:
+```bash
+http://localhost:8000/healthcheck
+```
 
-- docker build -t python-api .
+## Descripción del archivo `docker-compose.yml`
 
-Inicia un contenedor basado en la imagen python-api, asociándolo a la red mongodb-net y pasando las variables de entorno necesarias para conectarse a MongoDB:
+### Servicio `python-api`
 
-- docker run -d --name python-api --network mongodb-net -p 8000:8000 \
-  -e MONGODB_HOST=mongodb \
-  -e MONGODB_PORT=27017 \
-  python-api
+- **build**: Contexto para construir la imagen de la API.
+- **container_name**: Nombre del contenedor: `python-api`.
+- **environment**: Variables de entorno definidas en `.env`.
+- **ports**: Expone el puerto `8000`.
+- **volumes**:
+  - Persistencia de logs: `./volumes/logs/info.log:/opt/python-api/logs/info.log`.
+- **networks**: Conectado a la red `mongodb-net`.
+- **restart**: Política de reinicio: `always`.
+- **depends_on**: Asegura que el servicio `mongodb` esté disponible antes de iniciar.
+- **profiles**: Ejecutado en el perfil `prod`.
+- **hostname**: Nombre del host asignado: `python-api`.
 
-Puedes acceder al endpoint /guardar-lista-no-ordenada para ordenar una lista de números. Por ejemplo:
-- http://localhost:8000/guardar-lista-no-ordenada?lista_no_ordenada=5,4,7,2,7,2
+### Servicio `mongodb`
 
-Si deseas visualizar los datos almacenados en MongoDB, puedes utilizar MongoDB Compass o cualquier otra herramienta para conectarte al contenedor MongoDB en el puerto 27017.
+- **image**: Imagen oficial de MongoDB (`mongo:latest`).
+- **container_name**: Nombre del contenedor: `mongodb`.
+- **ports**: Expone el puerto `27017` (opcional, para uso con herramientas como MongoDB Compass).
+- **volumes**:
+  - Persistencia de datos: `mongodb_data:/data/db`.
+- **networks**: Conectado a la red `mongodb-net`.
+- **restart**: Política de reinicio: `always`.
+- **profiles**: Ejecutado en el perfil `prod`.
+- **hostname**: Nombre del host asignado: `mongodb`.
 
+## Troubleshooting
 
-## Crear y ejecutar los contenedores
+- **Problemas de conexión a MongoDB**: Asegúrate de que el contenedor `mongodb` esté funcionando correctamente y que las variables de entorno estén configuradas correctamente.
+- **Conflicto de puertos**: Cambia los puertos en el archivo `docker-compose.yml` si están en uso.
+- **Permisos para directorios**: Asegúrate de que los directorios creados para los logs y los volúmenes tengan permisos adecuados.
 
-Para construir y levantar los contenedores, ejecuta el siguiente comando:
-- docker-compose --env-file .env --profile prod up --build
+## Etiquetado de versión
+
+Esta configuración corresponde a la versión `v1.1.0`, que incluye:
+
+1. Uso de archivos `.env`.
+2. Configuración de volúmenes persistentes para datos y logs.
+3. Mejora en la documentación y comandos actualizados.
