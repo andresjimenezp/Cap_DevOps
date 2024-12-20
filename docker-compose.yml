@@ -11,6 +11,10 @@ services:
       - "8000:8000"
     volumes:
       - ./volumes/logs/info.log:/opt/python-api/logs/info.log
+      - ./python-api/main.py:/opt/main.py
+      - ./python-api/mongo.py:/opt/mongo.py
+      - ./python-api/requirements.txt:/opt/requirements.txt
+      - ./volumes/logs/api-monitor.log:/opt/api-monitor/logs/api-monitor.log
     networks:
       - mongodb-net
     depends_on:

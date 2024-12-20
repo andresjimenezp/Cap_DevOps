@@ -2,3 +2,4 @@ fastapi
 uvicorn
 pymongo
 pytz
+requests==2.32.3
