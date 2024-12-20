@@ -1,22 +1,29 @@
-# Proyecto de API con FastAPI y MongoDB
+# Proyecto de API con FastAPI, MongoDB y Monitoreo
 
 ## Descripción
 
-Este proyecto implementa una API simple utilizando FastAPI. La API tiene tres endpoints:
+Este proyecto implementa una API simple utilizando FastAPI y MongoDB, junto con un sistema de monitoreo adicional que verifica el estado de la API. La solución incluye:
 
-1. **/lista-ordenada**: Toma una lista de números no ordenada como parámetro de consulta, la ordena y devuelve la lista ordenada junto con la hora del sistema.
-2. **/healthcheck**: Verifica el estado del API devolviendo la respuesta "OK".
-3. **/guardar-lista-no-ordenada**: Guarda una lista no ordenada en una base de datos MongoDB junto con la hora del sistema y un identificador único (UUID4), y devuelve un mensaje de éxito con el ID generado.
+1. **API con FastAPI**:
+   - **/lista-ordenada**: Ordena una lista de números proporcionada por el usuario y devuelve la lista ordenada junto con la hora del sistema.
+   - **/healthcheck**: Verifica el estado de la API devolviendo "OK".
+   - **/guardar-lista-no-ordenada**: Guarda una lista no ordenada en una base de datos MongoDB con un identificador único (UUID4) y la hora del sistema.
 
-El proyecto también está configurado para ejecutarse dentro de un contenedor Docker. Además, se utiliza MongoDB como base de datos, y la API puede conectarse a MongoDB a través de una red Docker.
+2. **Monitoreo con `api-monitor`**:
+   - Verifica periódicamente el estado de la API a través del endpoint `/healthcheck`.
+   - Registra los resultados en un archivo de logs.
+
+3. **Configuración basada en contenedores**:
+   - Los servicios de la API, MongoDB y el monitoreo se ejecutan en contenedores Docker.
+   - Uso de redes Docker para la comunicación entre servicios.
 
 ## Requisitos
 
 - Docker
-- MongoDB (se utilizará la imagen oficial de MongoDB en Docker).
+- Docker Compose
 - Python 3.9 o superior
 
-## Instrucciones para ejecutar el proyecto
+## Configuración inicial
 
 ### Crear el archivo `.env`
 
@@ -25,111 +32,132 @@ Crea un archivo `.env` en la raíz del proyecto con las siguientes variables de 
 ```
 MONGODB_HOST=mongodb
 MONGODB_PORT=27017
+TARGET_CONTAINER_HOST=python-api
+TARGET_CONTAINER_PORT=8000
+CHECK_INTERVAL=10
 TZ=America/Bogota
 ```
 
-Asegúrate de agregar el archivo `.env` al `.gitignore` para evitar subir información sensible al repositorio.
+- `MONGODB_HOST` y `MONGODB_PORT`: Configuración de la base de datos MongoDB.
+- `TARGET_CONTAINER_HOST` y `TARGET_CONTAINER_PORT`: Dirección y puerto de la API a monitorear.
+- `CHECK_INTERVAL`: Intervalo de tiempo (en segundos) entre cada verificación de monitoreo.
 
-También incluye una versión de demostración del archivo `.env` llamada `.env.demo` para que otros desarrolladores puedan configurarlo rápidamente.
+Incluye también un archivo de demostración llamado `.env.demo` para que otros desarrolladores puedan configurarlo rápidamente.
 
-### Construir la imagen Docker
+### Crear directorios para volúmenes y logs
 
-Ejecuta el siguiente comando para construir la imagen Docker de la API:
-
-```bash
-docker build -t python-api .
-```
-
-### Crear y configurar la red Docker
-
-Crea una red Docker llamada `mongodb-net` para que los contenedores (API y MongoDB) puedan comunicarse:
-
-```bash
-docker network create mongodb-net
-```
-
-### Crear directorios para volúmenes
-
-Crea los directorios necesarios para la persistencia de datos y logs:
+Crea los directorios necesarios para almacenar datos y registros:
 
 ```bash
 mkdir -p volumes/logs
 ```
 
-### Crear y ejecutar los contenedores con docker-compose
+Asegúrate de que los directorios tengan los permisos correctos:
 
-Utiliza el archivo `docker-compose.yml` para levantar los servicios. Ejecuta:
+```bash
+chmod -R 777 volumes
+```
+
+## Construcción y despliegue
+
+### Construir y ejecutar con Docker Compose
+
+Ejecuta el siguiente comando para levantar todos los servicios (API, MongoDB y monitoreo):
 
 ```bash
 docker-compose --env-file .env --profile prod up --build
 ```
 
-Esto iniciará los contenedores de MongoDB y la API de Python.
+Esto creará y ejecutará los contenedores necesarios.
 
-## Probar los endpoints
+## Uso de la API
 
 ### Lista ordenada
 
-Puedes acceder al endpoint `/lista-ordenada` para ordenar una lista de números. Por ejemplo:
+Endpoint: `/lista-ordenada`
+
+Ejemplo de uso:
 
 ```bash
 http://localhost:8000/lista-ordenada?lista_no_ordenada=3,1,4,5,2
 ```
 
+Resultado esperado:
+
+```json
+{
+  "lista_ordenada": [1, 2, 3, 4, 5],
+  "hora_del_sistema": "2024-12-19T20:00:00"
+}
+```
+
 ### Guardar lista no ordenada
 
-Accede al endpoint `/guardar-lista-no-ordenada` para guardar una lista en MongoDB:
+Endpoint: `/guardar-lista-no-ordenada`
+
+Ejemplo de uso:
 
 ```bash
 http://localhost:8000/guardar-lista-no-ordenada?lista_no_ordenada=5,4,7,2,7,2
 ```
 
+Resultado esperado:
+
+```json
+{
+  "mensaje": "Lista guardada exitosamente",
+  "id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
 ### Verificar el estado de la API
 
-Accede al endpoint `/healthcheck` para comprobar que la API está funcionando:
+Endpoint: `/healthcheck`
+
+Ejemplo de uso:
 
 ```bash
 http://localhost:8000/healthcheck
 ```
 
-## Descripción del archivo `docker-compose.yml`
+Resultado esperado:
 
-### Servicio `python-api`
+```json
+"OK"
+```
 
-- **build**: Contexto para construir la imagen de la API.
-- **container_name**: Nombre del contenedor: `python-api`.
-- **environment**: Variables de entorno definidas en `.env`.
-- **ports**: Expone el puerto `8000`.
-- **volumes**:
-  - Persistencia de logs: `./volumes/logs/info.log:/opt/python-api/logs/info.log`.
-- **networks**: Conectado a la red `mongodb-net`.
-- **restart**: Política de reinicio: `always`.
-- **depends_on**: Asegura que el servicio `mongodb` esté disponible antes de iniciar.
-- **profiles**: Ejecutado en el perfil `prod`.
-- **hostname**: Nombre del host asignado: `python-api`.
+## Monitoreo
 
-### Servicio `mongodb`
+El contenedor `api-monitor` verifica periódicamente el estado del endpoint `/healthcheck` y registra los resultados en el archivo de logs ubicado en `volumes/logs/api-monitor.log`.
 
-- **image**: Imagen oficial de MongoDB (`mongo:latest`).
-- **container_name**: Nombre del contenedor: `mongodb`.
-- **ports**: Expone el puerto `27017` (opcional, para uso con herramientas como MongoDB Compass).
-- **volumes**:
-  - Persistencia de datos: `mongodb_data:/data/db`.
-- **networks**: Conectado a la red `mongodb-net`.
-- **restart**: Política de reinicio: `always`.
-- **profiles**: Ejecutado en el perfil `prod`.
-- **hostname**: Nombre del host asignado: `mongodb`.
+### Inspeccionar los logs de monitoreo
 
-## Troubleshooting
+Puedes revisar los logs directamente desde el contenedor:
 
-- **Problemas de conexión a MongoDB**: Asegúrate de que el contenedor `mongodb` esté funcionando correctamente y que las variables de entorno estén configuradas correctamente.
-- **Conflicto de puertos**: Cambia los puertos en el archivo `docker-compose.yml` si están en uso.
-- **Permisos para directorios**: Asegúrate de que los directorios creados para los logs y los volúmenes tengan permisos adecuados.
+```bash
+docker exec -it api-monitor cat /opt/api-monitor/logs/api-monitor.log
+```
 
-## Etiquetado de versión
+O desde el host:
 
-Esta configuración corresponde a la versión `v1.1.0`, que incluye:
+```bash
+cat volumes/logs/api-monitor.log
+```
 
-1. Uso de archivos `.env`.
-2. Configuración de volúmenes persistentes para datos y logs.
-3. Mejora en la documentación y comandos actualizados.
+### Configurar el intervalo de verificación
+
+Puedes ajustar el intervalo de verificación modificando la variable `CHECK_INTERVAL` en el archivo `.env`.
+
+4. **Conflictos de puertos**:
+   - Cambia los puertos en el archivo `docker-compose.yml` si están en uso.
+
+## Versionado
+
+Esta configuración corresponde a la versión `v2.1.0`, que incluye:
+
+1. Integración del sistema de monitoreo (`api-monitor`).
+2. Uso de archivos `.env` para configuración.
+3. Configuración de volúmenes persistentes para datos y logs.
+4. Documentación actualizada y mejoras en el despliegue.
+
+---
